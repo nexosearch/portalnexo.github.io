@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xadrez Online - Salas e Robos</title>
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+  <h1>Xadrez Online - Salas e Robos</h1>
+  <p>Estado: <strong id="connectionBadge">Partida contra Robo</strong></p>
+
+  <table border="0" cellpadding="12" cellspacing="0">
+    <tr>
+      <!-- COLUNA DO TABULEIRO -->
+      <td valign="top">
+        <table border="1" cellpadding="6" cellspacing="0" width="100%">
+          <tr>
+            <td>
+              <strong id="topPlayerName">Robo Tatico</strong>
+              (<span id="topColorLabel">Pretas</span>)
+              <div id="topCaptured"></div>
+            </td>
+            <td align="right" width="90">
+              <strong id="topClock">Infinito</strong>
+            </td>
+          </tr>
+        </table>
+
+        <br />
+
+        <!-- TABULEIRO MONTADO EM HTML PURO -->
+        <table id="board" border="1" cellspacing="0" cellpadding="0"></table>
+
+        <br />
+
+        <table border="1" cellpadding="6" cellspacing="0" width="100%">
+          <tr>
+            <td>
+              <strong id="bottomPlayerName">Jogador (Voce)</strong>
+              (<span id="bottomColorLabel">Brancas</span>)
+              <div id="bottomCaptured"></div>
+            </td>
+            <td align="right" width="90">
+              <strong id="bottomClock">Infinito</strong>
+            </td>
+          </tr>
+        </table>
+      </td>
+
+      <!-- COLUNA DE CONTROLES, SALAS E CHAT -->
+      <td valign="top" width="400">
+        <fieldset>
+          <legend><strong>Status da Partida</strong></legend>
+          <p><strong id="gameStatusText">Sua vez de jogar!</strong></p>
+          <p>
+            <button id="flipBoardBtn">Girar Tabuleiro</button>
+            <button id="drawBtn" hidden>Pedir Empate</button>
+            <button id="resignBtn">Desistir</button>
+            <button id="rematchBtn" hidden>Revanche</button>
+          </p>
+        </fieldset>
+
+        <br />
+
+        <fieldset>
+          <legend><strong>Salas Online (Jogar com Outra Pessoa)</strong></legend>
+          <p>
+            <label for="playerNameInput">Seu Apelido:</label><br />
+            <input type="text" id="playerNameInput" placeholder="Ex: Rafael" maxlength="18" size="32" />
+          </p>
+          <p>
+            <label for="roomCodeInput">Nome ou Codigo da Sala:</label><br />
+            <input type="text" id="roomCodeInput" placeholder="Ex: mesa-1" maxlength="24" size="32" />
+          </p>
+          <p>
+            <label for="onlineColorSelect">Sua Cor (ao criar):</label>
+            <select id="onlineColorSelect">
+              <option value="random">Aleatoria</option>
+              <option value="w">Brancas</option>
+              <option value="b">Pretas</option>
+            </select>
+            &nbsp;
+            <label for="onlineTimeSelect">Tempo:</label>
+            <select id="onlineTimeSelect">
+              <option value="0">Sem Relogio</option>
+              <option value="300">5 Minutos</option>
+              <option value="600" selected>10 Minutos</option>
+            </select>
+          </p>
+          <p>
+            <button id="createRoomBtn">Criar Sala</button>
+            <button id="joinRoomBtn">Entrar na Sala</button>
+            <button id="copyLinkBtn" hidden>Copiar Convite</button>
+            <button id="leaveRoomBtn" hidden>Sair da Sala</button>
+          </p>
+          <p>
+            Salas Publicas Rapidas:<br />
+            <button data-quick-room="arena-1">Arena 1</button>
+            <button data-quick-room="arena-2">Arena 2</button>
+            <button data-quick-room="arena-3">Arena 3</button>
+            <button data-quick-room="torneio">Torneio</button>
+          </p>
+          <p id="lobbyStatus"></p>
+        </fieldset>
+
+        <br />
+
+        <fieldset>
+          <legend><strong>Jogar Contra Robos</strong></legend>
+          <p>
+            <label for="botLevelSelect">Nivel:</label>
+            <select id="botLevelSelect">
+              <option value="1">Iniciante (Facil)</option>
+              <option value="2" selected>Tatico (Medio)</option>
+              <option value="3">Mestre (Dificil)</option>
+            </select>
+            &nbsp;
+            <label for="botColorSelect">Cor:</label>
+            <select id="botColorSelect">
+              <option value="w">Brancas</option>
+              <option value="b">Pretas</option>
+              <option value="random">Aleatoria</option>
+            </select>
+            &nbsp;
+            <label for="botTimeSelect">Tempo:</label>
+            <select id="botTimeSelect">
+              <option value="0" selected>Sem Relogio</option>
+              <option value="300">5 Min</option>
+              <option value="600">10 Min</option>
+            </select>
+          </p>
+          <p>
+            <button id="playBotBtn">Nova Partida contra Robo</button>
+          </p>
+        </fieldset>
+
+        <br />
+
+        <fieldset>
+          <legend><strong>Historico de Lances</strong></legend>
+          <textarea id="movesBox" rows="6" cols="44" readonly></textarea>
+        </fieldset>
+
+        <br />
+
+        <fieldset>
+          <legend><strong>Chat da Sala</strong></legend>
+          <textarea id="chatBox" rows="6" cols="44" readonly></textarea><br />
+          <input type="text" id="chatInput" placeholder="Digite uma mensagem..." maxlength="140" size="34" />
+          <button id="sendChatBtn">Enviar</button>
+        </fieldset>
+      </td>
+    </tr>
+  </table>
+
+  <dialog id="promoModal">
+    <h3>Promover Peao</h3>
+    <p>Escolha a nova peca:</p>
+    <div id="promoChoices"></div>
+  </dialog>
+
+  <dialog id="drawOfferModal">
+    <h3>Pedido de Empate</h3>
+    <p>Seu oponente ofereceu empate. Voce aceita?</p>
+    <button id="acceptDrawBtn">Aceitar</button>
+    <button id="declineDrawBtn">Recusar</button>
+  </dialog>
+
+  <script type="module">
+    import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm';
+
+    const PIECE_IMG_BASE = 'https://chessboardjs.com/img/chesspieces/wikipedia/';
+    const PIECE_NAMES = {
+      p: 'Peao',
+      r: 'Torre',
+      n: 'Cavalo',
+      b: 'Bispo',
+      q: 'Rainha',
+      k: 'Rei'
+    };
+
+    function getPieceImgUrl(type, color) {
+      return `${PIECE_IMG_BASE}${color}${type.toUpperCase()}.png`;
+    }
+
+    function createPieceImg(type, color, size = 50) {
+      const img = document.createElement('img');
+      img.src = getPieceImgUrl(type, color);
+      img.width = size;
+      img.height = size;
+      img.alt = `${PIECE_NAMES[type]} ${color === 'w' ? 'Branco' : 'Preto'}`;
+      return img;
+    }
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, dur = 0.08, type = 'sine') {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch {}
+    }
+
+    const state = {
+      mode: 'bot',
+      game: new Chess(),
+      sessionId: 0,
+      myColor: 'w',
+      boardFlipped: false,
+      selectedSquare: null,
+      dragFrom: null,
+      legalTargets: [],
+      lastMove: null,
+      pendingPromo: null,
+
+      peer: null,
+      conn: null,
+      isHost: false,
+      roomSlug: '',
+      myName: 'Jogador',
+      oppName: 'Robo Tatico',
+      onlineConnected: false,
+
+      botLevel: 2,
+      botThinking: false,
+      botTimer: null,
+
+      baseTime: 0,
+      whiteTime: 0,
+      blackTime: 0,
+      clockInterval: null,
+      gameEnded: false,
+      endReason: ''
+    };
+
+    const el = (id) => document.getElementById(id);
+    const boardEl = el('board');
+    const lobbyStatus = el('lobbyStatus');
+    const connectionBadge = el('connectionBadge');
+
+    // =========================================================
+    // IA DO ROBO (Minimax + Poda Alfa-Beta)
+    // =========================================================
+    const PIECE_VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+    const PST = {
+      p: [
+        [0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],
+        [5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],
+        [5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]
+      ],
+      n: [
+        [-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],
+        [-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],
+        [-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],
+        [-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]
+      ],
+      b: [
+        [-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],
+        [-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],
+        [-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],
+        [-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]
+      ],
+      r: [
+        [0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],
+        [-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],
+        [-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]
+      ],
+      q: [
+        [-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],
+        [-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],
+        [0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],
+        [-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]
+      ],
+      k: [
+        [-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],
+        [-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],
+        [-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],
+        [20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]
+      ]
+    };
+
+    function evaluateBoard(chess) {
+      const board = chess.board();
+      let score = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = board[r][c];
+          if (!sq) continue;
+          const pstRow = sq.color === 'w' ? r : 7 - r;
+          const val = PIECE_VAL[sq.type] + PST[sq.type][pstRow][c];
+          score += sq.color === 'w' ? val : -val;
+        }
+      }
+      return score;
+    }
+
+    function orderMoves(moves) {
+      return moves.sort((a, b) => {
+        const scoreA = (a.captured ? PIECE_VAL[a.captured] * 10 : 0) + (a.promotion ? 800 : 0);
+        const scoreB = (b.captured ? PIECE_VAL[b.captured] * 10 : 0) + (b.promotion ? 800 : 0);
+        return scoreB - scoreA;
+      });
+    }
+
+    function minimax(chess, depth, alpha, beta, maximizing) {
+      if (chess.isCheckmate()) {
+        return maximizing ? -99999 - depth : 99999 + depth;
+      }
+      if (chess.isDraw() || chess.isStalemate()) return 0;
+      if (depth === 0) return evaluateBoard(chess);
+
+      const moves = orderMoves(chess.moves({ verbose: true }));
+      if (maximizing) {
+        let maxEval = -Infinity;
+        for (const m of moves) {
+          chess.move(m);
+          const ev = minimax(chess, depth - 1, alpha, beta, false);
+          chess.undo();
+          if (ev > maxEval) maxEval = ev;
+          if (ev > alpha) alpha = ev;
+          if (beta <= alpha) break;
+        }
+        return maxEval;
+      } else {
+        let minEval = Infinity;
+        for (const m of moves) {
+          chess.move(m);
+          const ev = minimax(chess, depth - 1, alpha, beta, true);
+          chess.undo();
+          if (ev < minEval) minEval = ev;
+          if (ev < beta) beta = ev;
+          if (beta <= alpha) break;
+        }
+        return minEval;
+      }
+    }
+
+    function pickBotMove() {
+      const chess = new Chess(state.game.fen());
+      const moves = orderMoves(chess.moves({ verbose: true }));
+      if (!moves.length) return null;
+
+      if (state.botLevel === 1 && Math.random() < 0.45) {
+        return moves[Math.floor(Math.random() * moves.length)];
+      }
+
+      const depth = state.botLevel === 1 ? 1 : state.botLevel === 2 ? 2 : 3;
+      const botIsWhite = chess.turn() === 'w';
+      let bestMove = moves[0];
+      let bestVal = botIsWhite ? -Infinity : Infinity;
+
+      for (const m of moves) {
+        chess.move(m);
+        const val = minimax(chess, depth - 1, -Infinity, Infinity, !botIsWhite);
+        chess.undo();
+
+        const jitter = state.botLevel === 3 ? 0 : (Math.random() - 0.5) * 8;
+        if (botIsWhite) {
+          if (val + jitter > bestVal) { bestVal = val + jitter; bestMove = m; }
+        } else {
+          if (val + jitter < bestVal) { bestVal = val + jitter; bestMove = m; }
+        }
+      }
+      return bestMove;
+    }
+
+    function scheduleBotTurn() {
+      if (state.mode !== 'bot' || state.gameEnded) return;
+      if (state.game.turn() === state.myColor) return;
+
+      state.botThinking = true;
+      updateStatusUI();
+      const currentSession = state.sessionId;
+
+      state.botTimer = setTimeout(() => {
+        if (currentSession !== state.sessionId || state.gameEnded) return;
+        const move = pickBotMove();
+        state.botThinking = false;
+        if (move) {
+          executeMove(move.from, move.to, move.promotion, false);
+        }
+      }, 320);
+    }
+
+    // =========================================================
+    // SISTEMA DE SALAS ONLINE (PeerJS WebRTC)
+    // =========================================================
+    function sanitizeRoom(raw) {
+      return raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    }
+
+    function getPeerId(slug) {
+      return `xadrez-arena-sala-v1-${slug}`;
+    }
+
+    function cleanupNetwork() {
+      if (state.conn) {
+        try { state.conn.close(); } catch {}
+        state.conn = null;
+      }
+      if (state.peer) {
+        try { state.peer.destroy(); } catch {}
+        state.peer = null;
+      }
+      state.onlineConnected = false;
+    }
+
+    function getMyName() {
+      const val = el('playerNameInput').value.trim();
+      return val || `Jogador-${Math.floor(100 + Math.random() * 899)}`;
+    }
+
+    function startOnlineRoom(slug, action = 'auto') {
+      if (!slug) {
+        lobbyStatus.textContent = 'Aviso: Digite um nome ou codigo de sala valido (letras/numeros).';
+        return;
+      }
+      cleanupNetwork();
+      state.myName = getMyName();
+      state.roomSlug = slug;
+      lobbyStatus.textContent = `Conectando a sala "${slug}"...`;
+
+      if (action === 'join') {
+        connectAsGuest(slug);
+      } else {
+        createAsHost(slug, action === 'auto');
+      }
+    }
+
+    function createAsHost(slug, fallbackToJoin) {
+      const peer = new Peer(getPeerId(slug));
+      state.peer = peer;
+      state.isHost = true;
+
+      peer.on('open', () => {
+        const chosenColor = el('onlineColorSelect').value;
+        const hostColor = chosenColor === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : chosenColor;
+        const timeSec = parseInt(el('onlineTimeSelect').value, 10);
+
+        startMatch({
+          mode: 'online',
+          myColor: hostColor,
+          baseTime: timeSec,
+          oppName: 'Aguardando oponente...'
+        });
+
+        lobbyStatus.textContent = `Sala "${slug}" criada. Aguardando outro jogador entrar.`;
+        addChatMsg('Sistema', `Sala "${slug}" criada. Compartilhe o nome ou clique em Copiar Convite.`, true);
+        connectionBadge.textContent = `Online - Sala ${slug} (Aguardando)`;
+      });
+
+      peer.on('connection', (conn) => {
+        if (state.conn && state.conn.open) {
+          conn.on('open', () => {
+            conn.send({ type: 'room_full' });
+            setTimeout(() => conn.close(), 300);
+          });
+          return;
+        }
+        setupConnection(conn);
+        conn.on('open', () => {
+          conn.send({
+            type: 'init',
+            hostName: state.myName,
+            hostColor: state.myColor,
+            baseTime: state.baseTime
+          });
+        });
+      });
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          if (fallbackToJoin) {
+            cleanupNetwork();
+            connectAsGuest(slug);
+          } else {
+            lobbyStatus.textContent = `A sala "${slug}" ja existe. Clique em "Entrar na Sala".`;
+            cleanupNetwork();
+          }
+        } else {
+          lobbyStatus.textContent = `Erro de conexao: ${err.type}`;
+        }
+      });
+    }
+
+    function connectAsGuest(slug) {
+      const peer = new Peer();
+      state.peer = peer;
+      state.isHost = false;
+
+      peer.on('open', () => {
+        const conn = peer.connect(getPeerId(slug), { reliable: true });
+        setupConnection(conn);
+
+        const timeout = setTimeout(() => {
+          if (!state.onlineConnected) {
+            lobbyStatus.textContent = `Sala "${slug}" nao encontrada ou host offline.`;
+            cleanupNetwork();
+          }
+        }, 7000);
+
+        conn.on('open', () => clearTimeout(timeout));
+      });
+
+      peer.on('error', (err) => {
+        lobbyStatus.textContent = err.type === 'peer-unavailable'
+          ? `A sala "${slug}" ainda nao existe. Clique em "Criar Sala".`
+          : `Erro na conexao: ${err.type}`;
+        cleanupNetwork();
+      });
+    }
+
+    function setupConnection(conn) {
+      state.conn = conn;
+
+      conn.on('data', (data) => {
+        switch (data.type) {
+          case 'room_full':
+            alert('Esta sala ja esta cheia (2 jogadores).');
+            leaveOnlineRoom();
+            break;
+
+          case 'init':
+            state.onlineConnected = true;
+            const myCol = data.hostColor === 'w' ? 'b' : 'w';
+            startMatch({
+              mode: 'online',
+              myColor: myCol,
+              baseTime: data.baseTime,
+              oppName: data.hostName
+            });
+            conn.send({ type: 'ready', guestName: state.myName });
+            lobbyStatus.textContent = `Conectado na sala "${state.roomSlug}" contra ${data.hostName}.`;
+            addChatMsg('Sistema', `Voce entrou na sala! Jogando contra ${data.hostName}.`, true);
+            connectionBadge.textContent = `Online - Sala ${state.roomSlug}`;
+            startClockIfNeeded();
+            break;
+
+          case 'ready':
+            state.onlineConnected = true;
+            state.oppName = data.guestName;
+            updatePlayersUI();
+            updateStatusUI();
+            lobbyStatus.textContent = `Partida em andamento contra ${data.guestName}.`;
+            addChatMsg('Sistema', `${data.guestName} entrou na sala! A partida comecou.`, true);
+            connectionBadge.textContent = `Online - Sala ${state.roomSlug}`;
+            startClockIfNeeded();
+            break;
+
+          case 'move':
+            if (data.whiteTime !== undefined) {
+              state.whiteTime = data.whiteTime;
+              state.blackTime = data.blackTime;
+            }
+            executeMove(data.from, data.to, data.promotion, false);
+            break;
+
+          case 'chat':
+            addChatMsg(data.sender, data.text, false);
+            break;
+
+          case 'resign':
+            endGame(`${state.oppName} desistiu! Voce venceu!`);
+            break;
+
+          case 'draw_offer':
+            el('drawOfferModal').showModal();
+            break;
+
+          case 'draw_accept':
+            endGame('Empate por acordo mutuo.');
+            break;
+
+          case 'draw_decline':
+            addChatMsg('Sistema', `${state.oppName} recusou o pedido de empate.`, true);
+            break;
+
+          case 'rematch_request':
+            addChatMsg('Sistema', `${state.oppName} pediu revanche! Clique em Revanche para aceitar.`, true);
+            el('rematchBtn').textContent = 'Aceitar Revanche';
+            el('rematchBtn').dataset.accepted = 'pending';
+            break;
+
+          case 'rematch_accept':
+            startRematch(data.newHostColor);
+            break;
+        }
+      });
+
+      conn.on('close', () => {
+        if (state.mode === 'online') {
+          state.onlineConnected = false;
+          addChatMsg('Sistema', 'O oponente desconectou da sala.', true);
+          connectionBadge.textContent = 'Oponente desconectado';
+          if (!state.gameEnded) {
+            endGame('O oponente saiu da sala.');
+          }
+        }
+      });
+    }
+
+    // =========================================================
+    // CONTROLE DA PARTIDA E TABULEIRO (CLIQUE + ARRASTAR)
+    // =========================================================
+    function startMatch({ mode, myColor, baseTime, oppName }) {
+      clearTimeout(state.botTimer);
+      clearInterval(state.clockInterval);
+
+      state.sessionId++;
+      state.mode = mode;
+      state.game = new Chess();
+      state.myColor = myColor;
+      state.boardFlipped = myColor === 'b';
+      state.selectedSquare = null;
+      state.dragFrom = null;
+      state.legalTargets = [];
+      state.lastMove = null;
+      state.botThinking = false;
+      state.baseTime = baseTime;
+      state.whiteTime = baseTime;
+      state.blackTime = baseTime;
+      state.gameEnded = false;
+      state.endReason = '';
+      state.oppName = oppName;
+
+      el('movesBox').value = '';
+      el('chatBox').value = '';
+      el('rematchBtn').hidden = true;
+      el('rematchBtn').textContent = 'Revanche';
+      delete el('rematchBtn').dataset.accepted;
+
+      if (mode === 'bot') {
+        el('copyLinkBtn').hidden = true;
+        el('leaveRoomBtn').hidden = true;
+        el('drawBtn').hidden = true;
+        connectionBadge.textContent = `Contra Robo (Nivel ${state.botLevel})`;
+        addChatMsg('Robo', 'Boa sorte! Vamos jogar uma partida.', false);
+        startClockIfNeeded();
+      } else {
+        el('copyLinkBtn').hidden = false;
+        el('leaveRoomBtn').hidden = false;
+        el('drawBtn').hidden = false;
+      }
+
+      updatePlayersUI();
+      renderBoard();
+      updateStatusUI();
+      updateClocksUI();
+
+      if (mode === 'bot' && state.game.turn() !== state.myColor) {
+        scheduleBotTurn();
+      }
+    }
+
+    function leaveOnlineRoom() {
+      cleanupNetwork();
+      lobbyStatus.textContent = 'Voce saiu da sala online. Partida reiniciada contra o Robo.';
+      history.replaceState(null, '', location.pathname);
+      startBotFromUI();
+    }
+
+    function startRematch(forcedColor = null) {
+      const nextColor = forcedColor || (state.myColor === 'w' ? 'b' : 'w');
+      startMatch({
+        mode: state.mode,
+        myColor: nextColor,
+        baseTime: state.baseTime,
+        oppName: state.oppName
+      });
+      if (state.mode === 'online') {
+        state.onlineConnected = true;
+        startClockIfNeeded();
+      }
+      addChatMsg('Sistema', 'Nova partida iniciada com cores invertidas!', true);
+    }
+
+    function canPlayerInteract() {
+      if (state.gameEnded) return false;
+      if (state.mode === 'online' && !state.onlineConnected) return false;
+      if (state.game.turn() !== state.myColor) return false;
+      if (state.botThinking) return false;
+      return true;
+    }
+
+    function getSquareBgColor(sqName, r, c, piece) {
+      const isLight = (r + c) % 2 === 0;
+      const turn = state.game.turn();
+      const inCheck = state.game.inCheck();
+
+      let bg = isLight ? '#f0d9b5' : '#b58863';
+      if (state.lastMove && (state.lastMove.from === sqName || state.lastMove.to === sqName)) {
+        bg = isLight ? '#cdd26a' : '#aaa23a';
+      }
+      const legalTarget = state.legalTargets.find(m => m.to === sqName);
+      if (legalTarget) {
+        bg = piece ? '#fca5a5' : '#86efac';
+      }
+      if (state.selectedSquare === sqName) {
+        bg = '#fde047';
+      }
+      if (inCheck && piece && piece.type === 'k' && piece.color === turn) {
+        bg = '#ef4444';
+      }
+      return bg;
+    }
+
+    function refreshSquareColors() {
+      const cells = boardEl.querySelectorAll('td[data-square]');
+      cells.forEach(td => {
+        const sqName = td.dataset.square;
+        const r = parseInt(td.dataset.row, 10);
+        const c = parseInt(td.dataset.col, 10);
+        const piece = state.game.get(sqName);
+        td.setAttribute('bgcolor', getSquareBgColor(sqName, r, c, piece));
+      });
+    }
+
+    function tryMoveFromTo(fromSq, toSq) {
+      const legalFrom = state.game.moves({ square: fromSq, verbose: true });
+      const targetMove = legalFrom.find(m => m.to === toSq);
+      if (!targetMove) return false;
+
+      const isPromo = legalFrom.some(m => m.to === toSq && m.promotion);
+      if (isPromo) {
+        openPromoModal(fromSq, toSq);
+      } else {
+        executeMove(fromSq, toSq, undefined, true);
+      }
+      return true;
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      const boardData = state.game.board();
+      const files = ['a','b','c','d','e','f','g','h'];
+
+      for (let visualRow = 0; visualRow < 8; visualRow++) {
+        const tr = document.createElement('tr');
+
+        const rankLabelCell = document.createElement('td');
+        rankLabelCell.width = '24';
+        rankLabelCell.align = 'center';
+        rankLabelCell.setAttribute('bgcolor', '#e2e8f0');
+        const r = state.boardFlipped ? 7 - visualRow : visualRow;
+        rankLabelCell.textContent = String(8 - r);
+        tr.appendChild(rankLabelCell);
+
+        for (let visualCol = 0; visualCol < 8; visualCol++) {
+          const c = state.boardFlipped ? 7 - visualCol : visualCol;
+          const sqName = files[c] + (8 - r);
+          const piece = boardData[r][c];
+
+          const td = document.createElement('td');
+          td.width = '64';
+          td.height = '64';
+          td.align = 'center';
+          td.valign = 'middle';
+          td.dataset.square = sqName;
+          td.dataset.row = String(r);
+          td.dataset.col = String(c);
+          td.setAttribute('bgcolor', getSquareBgColor(sqName, r, c, piece));
+
+          if (piece) {
+            const img = createPieceImg(piece.type, piece.color, 50);
+            const canDrag = piece.color === state.myColor;
+            img.draggable = canDrag;
+
+            img.ondragstart = (e) => {
+              if (!canPlayerInteract() || piece.color !== state.myColor) {
+                e.preventDefault();
+                return;
+              }
+              state.dragFrom = sqName;
+              state.selectedSquare = sqName;
+              state.legalTargets = state.game.moves({ square: sqName, verbose: true });
+              e.dataTransfer.setData('text/plain', sqName);
+              e.dataTransfer.effectAllowed = 'move';
+              refreshSquareColors();
+            };
+
+            img.ondragend = () => {
+              if (state.dragFrom) {
+                state.dragFrom = null;
+                state.selectedSquare = null;
+                state.legalTargets = [];
+                refreshSquareColors();
+              }
+            };
+
+            td.appendChild(img);
+          }
+
+          td.ondragover = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          };
+
+          td.ondrop = (e) => {
+            e.preventDefault();
+            if (!canPlayerInteract()) return;
+            const fromSq = state.dragFrom || e.dataTransfer.getData('text/plain');
+            state.dragFrom = null;
+            if (!fromSq || fromSq === sqName) {
+              state.selectedSquare = null;
+              state.legalTargets = [];
+              refreshSquareColors();
+              return;
+            }
+            if (!tryMoveFromTo(fromSq, sqName)) {
+              state.selectedSquare = null;
+              state.legalTargets = [];
+              refreshSquareColors();
+            }
+          };
+
+          td.onclick = () => handleSquareClick(sqName);
+          tr.appendChild(td);
+        }
+
+        boardEl.appendChild(tr);
+      }
+
+      const fileRow = document.createElement('tr');
+      const corner = document.createElement('td');
+      corner.setAttribute('bgcolor', '#e2e8f0');
+      fileRow.appendChild(corner);
+
+      for (let visualCol = 0; visualCol < 8; visualCol++) {
+        const c = state.boardFlipped ? 7 - visualCol : visualCol;
+        const td = document.createElement('td');
+        td.height = '22';
+        td.align = 'center';
+        td.setAttribute('bgcolor', '#e2e8f0');
+        td.textContent = files[c];
+        fileRow.appendChild(td);
+      }
+      boardEl.appendChild(fileRow);
+    }
+
+    function handleSquareClick(sqName) {
+      if (!canPlayerInteract()) return;
+
+      if (state.selectedSquare && tryMoveFromTo(state.selectedSquare, sqName)) {
+        return;
+      }
+
+      const piece = state.game.get(sqName);
+      if (piece && piece.color === state.myColor) {
+        if (state.selectedSquare === sqName) {
+          state.selectedSquare = null;
+          state.legalTargets = [];
+        } else {
+          state.selectedSquare = sqName;
+          state.legalTargets = state.game.moves({ square: sqName, verbose: true });
+        }
+      } else {
+        state.selectedSquare = null;
+        state.legalTargets = [];
+      }
+      refreshSquareColors();
+    }
+
+    function openPromoModal(from, to) {
+      state.pendingPromo = { from, to };
+      const container = el('promoChoices');
+      container.innerHTML = '';
+      ['q', 'r', 'b', 'n'].forEach(type => {
+        const btn = document.createElement('button');
+        btn.appendChild(createPieceImg(type, state.myColor, 44));
+        btn.onclick = () => {
+          el('promoModal').close();
+          const { from: f, to: t } = state.pendingPromo;
+          state.pendingPromo = null;
+          executeMove(f, t, type, true);
+        };
+        container.appendChild(btn);
+      });
+      el('promoModal').showModal();
+    }
+
+    function executeMove(from, to, promotion, isLocalPlayer) {
+      let move = null;
+      try {
+        const moveArgs = promotion ? { from, to, promotion } : { from, to };
+        move = state.game.move(moveArgs);
+      } catch {
+        return;
+      }
+      if (!move) return;
+
+      state.selectedSquare = null;
+      state.dragFrom = null;
+      state.legalTargets = [];
+      state.lastMove = { from: move.from, to: move.to };
+
+      if (state.game.inCheck()) playTone(520, 0.14, 'triangle');
+      else if (move.captured) playTone(260, 0.09, 'square');
+      else playTone(380, 0.06, 'sine');
+
+      if (isLocalPlayer && state.mode === 'online' && state.conn && state.conn.open) {
+        state.conn.send({
+          type: 'move',
+          from: move.from,
+          to: move.to,
+          promotion: move.promotion,
+          whiteTime: state.whiteTime,
+          blackTime: state.blackTime
+        });
+      }
+
+      renderBoard();
+      renderMovesHistory();
+      updatePlayersUI();
+      checkGameOver();
+      updateStatusUI();
+
+      if (!state.gameEnded && state.mode === 'bot' && state.game.turn() !== state.myColor) {
+        scheduleBotTurn();
+      }
+    }
+
+    function checkGameOver() {
+      if (!state.game.isGameOver()) return;
+
+      let reason = 'Fim de jogo!';
+      if (state.game.isCheckmate()) {
+        const winner = state.game.turn() === 'w' ? 'Pretas' : 'Brancas';
+        reason = `Xeque-mate! Vitoria das ${winner}!`;
+      } else if (state.game.isStalemate()) {
+        reason = 'Empate por afogamento!';
+      } else if (state.game.isThreefoldRepetition()) {
+        reason = 'Empate por repeticao de lances!';
+      } else if (state.game.isInsufficientMaterial()) {
+        reason = 'Empate por material insuficiente!';
+      } else if (state.game.isDraw()) {
+        reason = 'Empate pela regra dos 50 lances!';
+      }
+      endGame(reason);
+    }
+
+    function endGame(reason) {
+      state.gameEnded = true;
+      state.endReason = reason;
+      clearInterval(state.clockInterval);
+      clearTimeout(state.botTimer);
+      playTone(190, 0.3, 'triangle');
+      el('rematchBtn').hidden = false;
+      updateStatusUI();
+    }
+
+    // =========================================================
+    // ATUALIZACAO DE INTERFACE, RELOGIO E CAPTURAS
+    // =========================================================
+    function updatePlayersUI() {
+      const topColor = state.boardFlipped ? 'w' : 'b';
+      const bottomColor = state.boardFlipped ? 'b' : 'w';
+
+      const nameFor = (c) => (c === state.myColor ? `${state.myName} (Voce)` : state.oppName);
+      const colorText = (c) => (c === 'w' ? 'Brancas' : 'Pretas');
+
+      el('topPlayerName').textContent = nameFor(topColor);
+      el('bottomPlayerName').textContent = nameFor(bottomColor);
+      el('topColorLabel').textContent = colorText(topColor);
+      el('bottomColorLabel').textContent = colorText(bottomColor);
+
+      const topCapEl = el('topCaptured');
+      const botCapEl = el('bottomCaptured');
+      topCapEl.innerHTML = '';
+      botCapEl.innerHTML = '';
+
+      for (const m of state.game.history({ verbose: true })) {
+        if (!m.captured) continue;
+        const capturedPieceColor = m.color === 'w' ? 'b' : 'w';
+        const targetEl = m.color === topColor ? topCapEl : botCapEl;
+        targetEl.appendChild(createPieceImg(m.captured, capturedPieceColor, 20));
+      }
+    }
+
+    function updateStatusUI() {
+      const box = el('gameStatusText');
+      if (state.gameEnded) {
+        box.textContent = state.endReason;
+        return;
+      }
+      if (state.mode === 'online' && !state.onlineConnected) {
+        box.textContent = `Aguardando outro jogador entrar na sala "${state.roomSlug}"...`;
+        return;
+      }
+      if (state.botThinking) {
+        box.textContent = 'Robo esta pensando...';
+        return;
+      }
+
+      const turnText = state.game.turn() === state.myColor ? 'Sua vez de jogar!' : `Vez de ${state.oppName}`;
+      const checkAlert = state.game.inCheck() ? ' - XEQUE!' : '';
+      box.textContent = turnText + checkAlert;
+    }
+
+    function renderMovesHistory() {
+      const hist = state.game.history();
+      const box = el('movesBox');
+      let lines = [];
+      for (let i = 0; i < hist.length; i += 2) {
+        const w = hist[i] || '';
+        const b = hist[i + 1] || '';
+        lines.push(`${i / 2 + 1}. ${w} ${b}`.trim());
+      }
+      box.value = lines.join('\n');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function formatClock(sec) {
+      if (!state.baseTime) return 'Infinito';
+      const s = Math.max(0, sec);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function updateClocksUI() {
+      const topColor = state.boardFlipped ? 'w' : 'b';
+      const bottomColor = state.boardFlipped ? 'b' : 'w';
+      el('topClock').textContent = formatClock(topColor === 'w' ? state.whiteTime : state.blackTime);
+      el('bottomClock').textContent = formatClock(bottomColor === 'w' ? state.whiteTime : state.blackTime);
+    }
+
+    function startClockIfNeeded() {
+      clearInterval(state.clockInterval);
+      if (!state.baseTime) { updateClocksUI(); return; }
+
+      state.clockInterval = setInterval(() => {
+        if (state.gameEnded) return;
+        if (state.mode === 'online' && !state.onlineConnected) return;
+
+        if (state.game.turn() === 'w') state.whiteTime--;
+        else state.blackTime--;
+
+        updateClocksUI();
+
+        if (state.whiteTime <= 0) endGame('Tempo esgotado! Pretas venceram!');
+        else if (state.blackTime <= 0) endGame('Tempo esgotado! Brancas venceram!');
+      }, 1000);
+    }
+
+    function addChatMsg(sender, text, isSys = false) {
+      const box = el('chatBox');
+      const line = isSys ? `[Sistema] ${text}` : `${sender}: ${text}`;
+      box.value += (box.value ? '\n' : '') + line;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // =========================================================
+    // EVENTOS DOS BOTOES
+    // =========================================================
+    el('createRoomBtn').onclick = () => startOnlineRoom(sanitizeRoom(el('roomCodeInput').value), 'create');
+    el('joinRoomBtn').onclick = () => startOnlineRoom(sanitizeRoom(el('roomCodeInput').value), 'join');
+
+    document.querySelectorAll('[data-quick-room]').forEach(btn => {
+      btn.onclick = () => {
+        const slug = btn.dataset.quickRoom;
+        el('roomCodeInput').value = slug;
+        startOnlineRoom(slug, 'auto');
+      };
+    });
+
+    function startBotFromUI() {
+      cleanupNetwork();
+      state.myName = getMyName();
+      state.botLevel = parseInt(el('botLevelSelect').value, 10);
+      const colChoice = el('botColorSelect').value;
+      const myColor = colChoice === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : colChoice;
+      const timeSec = parseInt(el('botTimeSelect').value, 10);
+      const labels = { 1: 'Robo Iniciante', 2: 'Robo Tatico', 3: 'Robo Mestre' };
+
+      startMatch({
+        mode: 'bot',
+        myColor,
+        baseTime: timeSec,
+        oppName: labels[state.botLevel]
+      });
+    }
+
+    el('playBotBtn').onclick = startBotFromUI;
+    el('leaveRoomBtn').onclick = leaveOnlineRoom;
+
+    el('flipBoardBtn').onclick = () => {
+      state.boardFlipped = !state.boardFlipped;
+      updatePlayersUI();
+      updateClocksUI();
+      renderBoard();
+    };
+
+    el('resignBtn').onclick = () => {
+      if (state.gameEnded) return;
+      if (state.mode === 'online' && state.conn && state.conn.open) {
+        state.conn.send({ type: 'resign' });
+      }
+      endGame('Voce desistiu da partida.');
+    };
+
+    el('drawBtn').onclick = () => {
+      if (state.gameEnded || state.mode !== 'online' || !state.onlineConnected) return;
+      state.conn.send({ type: 'draw_offer' });
+      addChatMsg('Sistema', 'Pedido de empate enviado ao oponente.', true);
+    };
+
+    el('acceptDrawBtn').onclick = () => {
+      el('drawOfferModal').close();
+      if (state.conn && state.conn.open) state.conn.send({ type: 'draw_accept' });
+      endGame('Empate por acordo mutuo.');
+    };
+
+    el('declineDrawBtn').onclick = () => {
+      el('drawOfferModal').close();
+      if (state.conn && state.conn.open) state.conn.send({ type: 'draw_decline' });
+    };
+
+    el('rematchBtn').onclick = () => {
+      if (state.mode === 'bot') {
+        startRematch();
+        return;
+      }
+      if (!state.conn || !state.conn.open) return;
+
+      if (el('rematchBtn').dataset.accepted === 'pending') {
+        const nextMyColor = state.myColor === 'w' ? 'b' : 'w';
+        const oppNextColor = nextMyColor === 'w' ? 'b' : 'w';
+        state.conn.send({ type: 'rematch_accept', newHostColor: oppNextColor });
+        startRematch(nextMyColor);
+      } else {
+        state.conn.send({ type: 'rematch_request' });
+        el('rematchBtn').textContent = 'Aguardando...';
+        addChatMsg('Sistema', 'Convite de revanche enviado.', true);
+      }
+    };
+
+    el('copyLinkBtn').onclick = async () => {
+      const url = `${location.origin}${location.pathname}?sala=${encodeURIComponent(state.roomSlug)}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        el('copyLinkBtn').textContent = 'Copiado!';
+        setTimeout(() => (el('copyLinkBtn').textContent = 'Copiar Convite'), 2000);
+      } catch {
+        prompt('Copie o link da sala:', url);
+      }
+    };
+
+    function sendChat() {
+      const input = el('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addChatMsg(state.myName, text, false);
+
+      if (state.mode === 'online' && state.conn && state.conn.open) {
+        state.conn.send({ type: 'chat', sender: state.myName, text });
+      } else if (state.mode === 'bot') {
+        setTimeout(() => {
+          const replies = ['Interessante.', 'Estou calculando meus lances.', 'Boa jogada!'];
+          addChatMsg(state.oppName, replies[Math.floor(Math.random() * replies.length)], false);
+        }, 500);
+      }
+    }
+
+    el('sendChatBtn').onclick = sendChat;
+    el('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendChat();
+    });
+
+    const params = new URLSearchParams(location.search);
+    const urlSala = sanitizeRoom(params.get('sala') || '');
+    if (urlSala) {
+      el('roomCodeInput').value = urlSala;
+      lobbyStatus.textContent = `Sala "${urlSala}" detectada no link. Clique em "Entrar na Sala".`;
+    }
+
+    startBotFromUI();
+  </script>
+</body>
+</html>
